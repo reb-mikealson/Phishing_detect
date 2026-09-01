@@ -26,3 +26,10 @@ print(df.groupby("label")[["URLLength", "LineOfCode", "LargestLineLength", "NoOf
 corr = df.select_dtypes(include="number").corr()
 high_corr = corr[(corr.abs() > 0.9) & (corr != 1.0)]
 print(high_corr.stack().drop_duplicates())
+id_cols = ["FILENAME", "URL", "Domain", "Title"]
+redundant_cols = ["NoOfLettersInURL", "URLTitleMatchScore"]
+df_model = df.drop(columns=id_cols + redundant_cols)
+print("\n created df_model with shape:", df_model.shape)
+df.to_csv("cleaned_data.csv", index=False)            # full cleaned data (with ID columns, for reference/tracking)
+df_model.to_csv("model_ready_data.csv", index=False)   # ready for training
+print("Files saved successfully!")
