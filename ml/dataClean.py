@@ -23,3 +23,6 @@ outlier_cols = ["URLLength", "LineOfCode", "LargestLineLength", "NoOfExternalRef
 print("\nOutlier check (describe):")
 print(df[outlier_cols].describe())
 print(df.groupby("label")[["URLLength", "LineOfCode", "LargestLineLength", "NoOfExternalRef"]].describe())
+corr = df.select_dtypes(include="number").corr()
+high_corr = corr[(corr.abs() > 0.9) & (corr != 1.0)]
+print(high_corr.stack().drop_duplicates())
