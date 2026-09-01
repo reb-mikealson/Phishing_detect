@@ -19,3 +19,7 @@ print(df["label"].value_counts(normalize=True) * 100)
 print("\nUnique TLD count:", df["TLD"].nunique())
 print("\nTop 20 TLDs:")
 print(df["TLD"].value_counts().head(20))
+outlier_cols = ["URLLength", "LineOfCode", "LargestLineLength", "NoOfExternalRef"]
+print("\nOutlier check (describe):")
+print(df[outlier_cols].describe())
+print(df.groupby("label")[["URLLength", "LineOfCode", "LargestLineLength", "NoOfExternalRef"]].describe())
