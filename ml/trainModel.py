@@ -13,6 +13,12 @@ df_model["TLD"] = df_model["TLD"].apply(lambda x: x if x in top_tlds else "other
 df_model = pd.get_dummies(df_model, columns=["TLD"], drop_first=True)
 print("Shape after encoding TLD:", df_model.shape)
 
+df_model = df_model.drop(columns=["URLSimilarityIndex"])
+print("Shape after dropping leaky feature:", df_model.shape)
+
+X = df_model.drop(columns=["label"])
+y = df_model["label"]
+
 
 X = df_model.drop(columns=["label"])
 y = df_model["label"]
@@ -40,3 +46,7 @@ print("Confusion Matrix:\n", confusion_matrix(y_test, y_pred))
 importances = pd.Series(model.feature_importances_, index=X_train.columns)
 print("\nTop 15 most important features:")
 print(importances.sort_values(ascending=False).head(15))
+
+raw = pd.read_csv("cleaned_data.csv")
+print("\nURLSimilarityIndex by class:")
+print(raw.groupby("label")["URLSimilarityIndex"].describe())
