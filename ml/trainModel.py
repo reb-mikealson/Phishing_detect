@@ -50,3 +50,7 @@ print(importances.sort_values(ascending=False).head(15))
 raw = pd.read_csv("cleaned_data.csv")
 print("\nURLSimilarityIndex by class:")
 print(raw.groupby("label")["URLSimilarityIndex"].describe())
+
+for col in ["NoOfExternalRef", "NoOfSelfRef", "NoOfCSS", "LineOfCode", "NoOfImage"]:
+    print(f"\n{col} by class:")
+    print(raw.groupby("label")[col].describe()[["mean", "std", "min", "max"]])
