@@ -54,3 +54,9 @@ print(raw.groupby("label")["URLSimilarityIndex"].describe())
 for col in ["NoOfExternalRef", "NoOfSelfRef", "NoOfCSS", "LineOfCode", "NoOfImage"]:
     print(f"\n{col} by class:")
     print(raw.groupby("label")[col].describe()[["mean", "std", "min", "max"]])
+
+from sklearn.model_selection import cross_val_score
+
+scores = cross_val_score(model, X, y, cv=5, scoring="accuracy")
+print("Cross-validation scores:", scores)
+print("Mean CV accuracy:", scores.mean())
