@@ -60,3 +60,18 @@ from sklearn.model_selection import cross_val_score
 scores = cross_val_score(model, X, y, cv=5, scoring="accuracy")
 print("Cross-validation scores:", scores)
 print("Mean CV accuracy:", scores.mean())
+
+from sklearn.metrics import accuracy_score, classification_report
+# Training predictions
+y_train_pred = model.predict(X_train)
+
+# Test predictions
+y_test_pred = model.predict(X_test)
+
+print("TRAINING PERFORMANCE")
+print("Accuracy:", accuracy_score(y_train, y_train_pred))
+print(classification_report(y_train, y_train_pred))
+
+print("\nTEST PERFORMANCE")
+print("Accuracy:", accuracy_score(y_test, y_test_pred))
+print(classification_report(y_test, y_test_pred))
