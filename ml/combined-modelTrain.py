@@ -48,3 +48,29 @@ print("\n=== Combined Dataset — Test Performance ===")
 print("Accuracy:", accuracy_score(y_test, y_pred))
 print(classification_report(y_test, y_pred))
 print(confusion_matrix(y_test, y_pred))
+
+
+# ---- Cross-validation for stability ----
+scores = cross_val_score(model, X_combined, y_combined, cv=5, scoring="accuracy", n_jobs=-1)
+print("\nCross-validation scores:", scores)
+print("Mean CV accuracy:", scores.mean())
+
+# ---- THE REAL TEST: train on PhiUSIIL only, test on new dataset only (repeat for comparison) ----
+model_phi_only = RandomForestClassifier(n_estimators=100, random_state=42, n_jobs=-1)
+model_phi_only.fit(X_phi, y_phi)
+y_pred_cross = model_phi_only.predict(X_new)
+print("\n=== For comparison: PhiUSIIL-only model tested on new dataset ===")
+print("Accuracy:", accuracy_score(y_new, y_pred_cross))
+
+# ---- NEW TEST: train on COMBINED, but evaluate separately on each original dataset ----
+model_combined = RandomForestClassifier(n_estimators=100, random_state=42, n_jobs=-1)
+model_combined.fit(X_train, y_train)
+
+# Evaluate specifically on new-dataset-only rows within the test set
+print("\n=== Combined-trained model, evaluated on New dataset alone ===")
+pred_new_only = model_combined.predict(X_new)
+print("Accuracy:", accuracy_score(y_new, pred_new_only))
+
+print("\n=== Combined-trained model, evaluated on PhiUSIIL alone ===")
+pred_phi_only = model_combined.predict(X_phi)
+print("Accuracy:", accuracy_score(y_phi, pred_phi_only))
