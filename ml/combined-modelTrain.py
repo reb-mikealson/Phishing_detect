@@ -51,8 +51,11 @@ print(confusion_matrix(y_test, y_pred))
 
 
 # ---- Cross-validation for stability ----
-scores = cross_val_score(model, X_combined, y_combined, cv=5, scoring="accuracy", n_jobs=-1)
-print("\nCross-validation scores:", scores)
+from sklearn.model_selection import StratifiedKFold
+
+cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
+scores = cross_val_score(model, X_combined, y_combined, cv=cv, scoring="accuracy", n_jobs=-1)
+print("\nShuffled CV scores:", scores)
 print("Mean CV accuracy:", scores.mean())
 
 # ---- THE REAL TEST: train on PhiUSIIL only, test on new dataset only (repeat for comparison) ----
@@ -74,3 +77,7 @@ print("Accuracy:", accuracy_score(y_new, pred_new_only))
 print("\n=== Combined-trained model, evaluated on PhiUSIIL alone ===")
 pred_phi_only = model_combined.predict(X_phi)
 print("Accuracy:", accuracy_score(y_phi, pred_phi_only))
+
+import joblib
+joblib.dump(model_combined, "phishing_model.pkl")
+print("Model saved as phishing_model.pkl")
