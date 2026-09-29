@@ -5,17 +5,29 @@ import pandas as pd
 from urllib.parse import urlparse
 from bs4 import BeautifulSoup
 
-model = joblib.load("phishing_model_full.pkl")   # your original 67-feature model
+model = joblib.load("phishing_model_full.pkl")   # original 67-feature model
 
-TOP_TLDS = ["com","org","net","app","uk","co","io","de","ru","au",
-            "top","dev","jp","it","edu","fr","br","nl","ca","info"]
+TOP_20_TLDS = ["com","org","net","app","uk","co","io","de","ru","au",
+               "top","dev","jp","it","edu","fr","br","nl","ca","info"]
+
+TLD_DUMMY_COLS = ['au','br','ca','co','com','de','dev','edu','fr','info',
+                   'io','it','jp','net','nl','org','other','ru','top','uk']
 
 SOCIAL_DOMAINS = ["facebook.com","twitter.com","x.com","instagram.com",
-                   "linkedin.com","youtube.com"]
+                   "linkedin.com","youtube.com","tiktok.com"]
 
-def safe_get(url, timeout=8):     
-    headers = {"User-Agent": "Mozilla/5.0"}     
-    return requests.get(url, headers=headers, timeout=timeout, allow_redirects=True)   
+def safe_get(url, timeout=8):
+    headers = {"User-Agent": "Mozilla/5.0"}
+    return requests.get(url, headers=headers, timeout=timeout, allow_redirects=True)
+
+def get_tld_dummies(tld):
+    tld_group = tld if tld in TOP_20_TLDS else "other"
+    dummies = {f"TLD_{t}": 0 for t in TLD_DUMMY_COLS}
+    if tld_group != "app":   # "app" was dropped as the reference category during training
+        key = f"TLD_{tld_group}"
+        if key in dummies:
+            dummies[key] = 1
+    return dummies
 
 def extract_features(url):
     parsed = urlparse(url)
@@ -28,10 +40,8 @@ def extract_features(url):
     specials = len(url) - letters - digits
     is_ip = bool(re.match(r"^\d{1,3}(\.\d{1,3}){3}$", domain))
 
-    # crude "obfuscation" = percent-encoded characters (%XX)
     obf_chars = len(re.findall(r"%[0-9A-Fa-f]{2}", url))
 
-    # crude char continuation rate: longest run of same char / url length
     max_run, run = 1, 1
     for i in range(1, len(url)):
         run = run + 1 if url[i] == url[i-1] else 1
@@ -70,8 +80,8 @@ def extract_features(url):
         "DomainLength": len(domain),
         "IsDomainIP": int(is_ip),
         "CharContinuationRate": max_run / max(len(url), 1),
-        "TLDLegitimateProb": 0.5,          # approximation — needs training-data lookup for precision
-        "URLCharProb": 0.05,               # approximation — minor-importance feature
+        "TLDLegitimateProb": 0.5,          # approximation
+        "URLCharProb": 0.05,               # approximation
         "TLDLength": len(tld),
         "NoOfSubDomain": max(domain.count(".") - 1, 0),
         "HasObfuscation": int(obf_chars > 0),
@@ -91,7 +101,7 @@ def extract_features(url):
         "HasTitle": int(bool(title_text)),
         "DomainTitleMatchScore": 100.0 if domain.split(".")[0] in title_text.lower() else 0.0,
         "HasFavicon": int(bool(soup.find("link", rel=lambda x: x and "icon" in x.lower()))),
-        "Robots": 0,   # would need a separate request to /robots.txt
+        "Robots": 0,
         "IsResponsive": int(bool(soup.find("meta", attrs={"name": "viewport"}))),
         "NoOfURLRedirect": redirects,
         "NoOfSelfRedirect": redirects,
@@ -115,17 +125,15 @@ def extract_features(url):
         "NoOfExternalRef": external_ref,
     }
 
-    #Take a URL → inspect the URL and webpage → calculate useful properties → store them as features for the ML model.
-
     # ---- TLD one-hot encoding (must match training columns) ----
-    for t in TOP_TLDS:
-        features[f"TLD_{t}"] = int(tld == t)
+    features.update(get_tld_dummies(tld))
 
     return pd.DataFrame([features])
 
 def predict_url(url):
     features = extract_features(url)
-    features = features[model.feature_names_in_]  # ensure exact column order
+    features = features.reindex(columns=model.feature_names_in_, fill_value=0)  # enforce exact column order
+
     prediction = model.predict(features)[0]
     probability = model.predict_proba(features)[0]
 
