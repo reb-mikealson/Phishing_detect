@@ -131,8 +131,17 @@ def extract_features(url):
     return pd.DataFrame([features])
 
 def predict_url(url):
-    features = extract_features(url)
-    features = features.reindex(columns=model.feature_names_in_, fill_value=0)  # enforce exact column order
+    print(f"\nURL: {url}")
+
+    try:
+        resp = safe_get(url)
+    except Exception as e:
+        print(f"Could not analyze — page unreachable ({e})")
+        print("Note: an unreachable page could itself be suspicious (dead link, blocked, taken down) — treat with caution rather than assuming safe.")
+        return "UNKNOWN"
+
+    features = extract_features(url, resp)
+    features = features.reindex(columns=model.feature_names_in_, fill_value=0)
 
     prediction = model.predict(features)[0]
     probability = model.predict_proba(features)[0]
@@ -140,11 +149,13 @@ def predict_url(url):
     label = "PHISHING" if prediction == 1 else "LEGITIMATE"
     confidence = probability[prediction] * 100
 
-    print(f"\nURL: {url}")
     print(f"Prediction: {label}")
     print(f"Confidence: {confidence:.2f}%")
     return label
 
+
 if __name__ == "__main__":
     predict_url("https://www.google.com")
     predict_url("https://www.wikipedia.org")
+    predict_url("http://192.168.1.1/login")   # example: IP-based URL, minimal page
+    predict_url("https://github.com")          # another well-known legit site, more complex structure
