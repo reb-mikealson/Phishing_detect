@@ -75,3 +75,7 @@ print(classification_report(y_train, y_train_pred))
 print("\nTEST PERFORMANCE")
 print("Accuracy:", accuracy_score(y_test, y_test_pred))
 print(classification_report(y_test, y_test_pred))
+
+import joblib
+joblib.dump(model, "phishing_model_full.pkl")
+print("Full model saved as phishing_model_full.pkl")
