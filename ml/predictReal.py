@@ -6,6 +6,7 @@ from urllib.parse import urlparse
 from bs4 import BeautifulSoup
 
 model = joblib.load("phishing_model_full.pkl")   # original 67-feature model
+# NOTE: In this model's training data, label = 0 means PHISHING, label = 1 means LEGITIMATE
 
 TOP_20_TLDS = ["com","org","net","app","uk","co","io","de","ru","au",
                "top","dev","jp","it","edu","fr","br","nl","ca","info"]
@@ -29,7 +30,8 @@ def get_tld_dummies(tld):
             dummies[key] = 1
     return dummies
 
-def extract_features(url):
+def extract_features(url, resp):
+    """Build the feature row using the URL plus an already-fetched response."""
     parsed = urlparse(url)
     domain = parsed.netloc.replace("www.", "")
     tld = domain.split(".")[-1] if "." in domain else ""
@@ -47,16 +49,11 @@ def extract_features(url):
         run = run + 1 if url[i] == url[i-1] else 1
         max_run = max(max_run, run)
 
-    # ---- Fetch the live page ----
-    try:
-        resp = safe_get(url)
-        html = resp.text
-        redirects = len(resp.history)
-        final_domain = urlparse(resp.url).netloc
-        soup = BeautifulSoup(html, "html.parser")
-    except Exception as e:
-        print(f"Could not fetch page ({e}) — using URL-only features, page features set to 0.")
-        html, redirects, final_domain, soup = "", 0, domain, BeautifulSoup("", "html.parser")
+    # ---- Parse the already-fetched page ----
+    html = resp.text
+    redirects = len(resp.history)
+    final_domain = urlparse(resp.url).netloc
+    soup = BeautifulSoup(html, "html.parser")
 
     lines = html.splitlines() or [""]
     title_tag = soup.find("title")
@@ -125,9 +122,7 @@ def extract_features(url):
         "NoOfExternalRef": external_ref,
     }
 
-    # ---- TLD one-hot encoding (must match training columns) ----
     features.update(get_tld_dummies(tld))
-
     return pd.DataFrame([features])
 
 def predict_url(url):
@@ -146,16 +141,16 @@ def predict_url(url):
     prediction = model.predict(features)[0]
     probability = model.predict_proba(features)[0]
 
-    label = "PHISHING" if prediction == 1 else "LEGITIMATE"
+    # IMPORTANT: in this model, label 0 = phishing, label 1 = legitimate
+    label = "PHISHING" if prediction == 0 else "LEGITIMATE"
     confidence = probability[prediction] * 100
 
     print(f"Prediction: {label}")
     print(f"Confidence: {confidence:.2f}%")
     return label
 
-
 if __name__ == "__main__":
     predict_url("https://www.google.com")
     predict_url("https://www.wikipedia.org")
-    predict_url("http://192.168.1.1/login")   # example: IP-based URL, minimal page
-    predict_url("https://github.com")          # another well-known legit site, more complex structure
+    predict_url("https://github.com")
+    predict_url("http://localhost:8000/fake_phish_test.html")
